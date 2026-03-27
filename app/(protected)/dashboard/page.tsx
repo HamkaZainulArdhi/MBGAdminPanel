@@ -122,7 +122,7 @@ export default function DashboardPage() {
         <SchoolSummaryDashboard summary={summaryData} loading={loading} />
       </div>
       <div>
-        <h2 className="text-lg font-semibold mb-3">
+        <h2 className="text-lg font-semibold mb-3 ">
           {/* lucide icon */}
           <FileText className="h-5 w-5 inline mr-2" />
           Ringkasan Laporan Vendor Dan Distribusi Menu

@@ -26,8 +26,6 @@ interface BarChartCardProps {
   loading: boolean;
   title?: string;
   subtitle?: string;
-  chartHeight?: string; // e.g., "h-48", "h-64", "h-80"
-  chartWidth?: string; // e.g., "w-full", "w-80"
 }
 
 export function BarChartCard({
@@ -35,8 +33,6 @@ export function BarChartCard({
   loading,
   title = "Analisis Siswa & Porsi",
   subtitle = "Bar Chart",
-  chartHeight = "h-64",
-  chartWidth = "w-full",
 }: BarChartCardProps) {
   if (loading) {
     return (

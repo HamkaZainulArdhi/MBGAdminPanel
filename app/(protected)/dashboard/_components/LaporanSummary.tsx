@@ -30,13 +30,13 @@ export function LaporanSummary({ summary }: LaporanSummaryProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 :grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {stats.map((stat) => (
         <Card
           key={stat.label}
-          className="border-0 bg-primary text-primary-foreground "
+          className="border-0 bg-primary text-primary-foreground"
         >
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="flex flex-col items-start">
               <p className="text-xs font-semibold uppercase tracking-wide opacity-75">
                 {stat.label}
