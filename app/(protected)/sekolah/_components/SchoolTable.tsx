@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import {
-  Card,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardFooter } from "@/components/ui/card";
 import {
   Pagination,
   PaginationContent,
@@ -69,7 +66,7 @@ export function SchoolTable({
   const statusLabels = useMemo(() => {
     return uniqueStatuses.reduce(
       (acc, status) => ({ ...acc, [status]: status }),
-      {} as Record<string, string>
+      {} as Record<string, string>,
     );
   }, [uniqueStatuses]);
 
@@ -79,7 +76,7 @@ export function SchoolTable({
       ready: "Siap Distribusi",
       not_ready: "Belum Siap",
     }),
-    []
+    [],
   );
 
   const filteredData = useMemo(() => {

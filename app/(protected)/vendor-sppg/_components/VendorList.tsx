@@ -19,7 +19,7 @@ export function VendorList({ vendors, loading }: VendorListProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="h-[200px] rounded-xl border border-border/50 bg-card/50 p-5 space-y-4">
+          <div key={i} className="h-50 rounded-xl border border-border/50 bg-card/50 p-5 space-y-4">
             <div className="flex justify-between items-start">
               <div className="space-y-2 flex-1">
                 <Skeleton className="h-5 w-3/4" />

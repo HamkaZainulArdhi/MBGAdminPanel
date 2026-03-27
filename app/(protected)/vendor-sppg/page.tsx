@@ -1,7 +1,3 @@
-/* ============================================================================
-   VendorSppgPage — Main list view for vendors
-   ============================================================================ */
-
 "use client";
 
 import { useVendorData } from "@/hooks/useVendorData";
@@ -18,7 +14,6 @@ export default function VendorSppgPage() {
           Daftar vendor yang terdaftar dalam sistem SPPG MBG
         </p>
       </div>
-
       <VendorList vendors={vendors} loading={loading} />
     </div>
   );

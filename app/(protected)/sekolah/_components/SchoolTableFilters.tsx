@@ -28,7 +28,7 @@ interface SchoolTableFiltersProps {
 function getDisplayLabel(
   value: string,
   labels: Record<string, string>,
-  fallback: string
+  fallback: string,
 ): string {
   if (value === "all") return fallback;
   return labels[value] || value;
@@ -76,7 +76,7 @@ export function SchoolTableFilters({
                 {getDisplayLabel(
                   statusDistribusiFilter,
                   statusDistribusiLabels,
-                  "Status Distribusi"
+                  "Status Distribusi",
                 )}
               </span>
             </SelectTrigger>
@@ -111,7 +111,7 @@ export function SchoolTableFilters({
                 {getDisplayLabel(
                   statusSekolahFilter,
                   statusLabels,
-                  "Status Sekolah"
+                  "Status Sekolah",
                 )}
               </span>
             </SelectTrigger>

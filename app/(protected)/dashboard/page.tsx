@@ -8,6 +8,7 @@ import {
   Clock,
   CheckCircle2,
   TrendingUp,
+  FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { SchoolSummaryDashboard } from "./_components/SchoolSummaryDashboard";
@@ -113,9 +114,19 @@ export default function DashboardPage() {
         />
       </div>
 
-      <SchoolSummaryDashboard summary={summaryData} loading={loading} />
+      <div className="space-y-8">
+        <span className="text-lg font-semibold block mb-3 ">
+          <GraduationCap className="h-5 w-5 inline mr-2" />
+          Data Sekolah Penerima Program MBG
+        </span>
+        <SchoolSummaryDashboard summary={summaryData} loading={loading} />
+      </div>
       <div>
-        <h2 className="text-lg font-bold mb-2">Ringkasan Laporan</h2>
+        <h2 className="text-lg font-semibold mb-3">
+          {/* lucide icon */}
+          <FileText className="h-5 w-5 inline mr-2" />
+          Ringkasan Laporan Vendor Dan Distribusi Menu
+        </h2>
         {loadingLaporan ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => (

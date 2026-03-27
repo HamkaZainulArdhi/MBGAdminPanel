@@ -25,14 +25,14 @@ export function VendorCard({ vendor }: VendorCardProps) {
         <CardContent className="space-y-2 p-3">
           {/* Header & Status */} 
           <div className="flex items-start justify-between ">
-            <div className="space-y-1">
+            <div className="space-y-2">
               <h3 className="font-bold text-base">
                 {vendor.name}
               </h3>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold ">
                 Pemilik :
-                <User className="h-3 w-3" />
-                <span>{vendor.ownerName}</span>
+                <User className="h-3 w-3 text-foreground " />
+                <span className="text-foreground">{vendor.ownerName} </span>
               </div>
             </div>
             <Badge

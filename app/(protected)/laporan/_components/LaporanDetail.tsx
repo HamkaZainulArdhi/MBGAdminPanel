@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 
 interface LaporanDetailProps {
   report: AnomalyReportWithRelation;
@@ -280,12 +281,12 @@ export function LaporanDetail({ report, onStatusUpdate }: LaporanDetailProps) {
 
               {/* Status Dropdown */}
               <div>
-                <label
+                <Label
                   htmlFor="status-select"
                   className="text-xs font-semibold uppercase text-muted-foreground block mb-2"
                 >
                   Ubah Status
-                </label>
+                </Label>
                 <Select
                   value={selectedStatus}
                   onValueChange={(value) =>
