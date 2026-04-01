@@ -15,6 +15,8 @@ import {
   Unsubscribe,
   QueryConstraint,
   DocumentData,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -59,7 +61,10 @@ function toISODate(value: any): string {
  * never receive raw {seconds, nanoseconds} objects.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalise(raw: DocumentData & { id?: string }, type: RegistrationType): RegistrationData {
+function normalise(
+  raw: DocumentData & { id?: string },
+  type: RegistrationType,
+): RegistrationData {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const base: DocumentData = {
     ...raw,
@@ -97,9 +102,7 @@ export async function fetchRegistrations(
   const collectionName = COLLECTION_MAP[type];
   const q = buildQuery(collectionName, includeApproved);
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) =>
-    normalise({ id: d.id, ...d.data() }, type),
-  );
+  return snapshot.docs.map((d) => normalise({ id: d.id, ...d.data() }, type));
 }
 
 /**
@@ -196,6 +199,179 @@ export async function assignDriverToSchool(
 }
 
 /**
+ * Assign a driver to a vendor.
+ * Updates:
+ * - drivers.assignedVendorId
+ * - vendors.driverIds (add driver ID)
+ *
+ * If driver was previously assigned to another vendor, removes it from that vendor's driverIds.
+ */
+export async function assignDriverToVendor(
+  driverId: string,
+  vendorId: string,
+): Promise<void> {
+  // First, get the driver's current state to check if reassigning
+  const driverRef = doc(db, "drivers", driverId);
+  const driverSnap = await getDoc(driverRef);
+  const currentVendorId = driverSnap.data()?.assignedVendorId;
+
+  // If driver was previously assigned to a different vendor, remove from old vendor's driverIds
+  if (currentVendorId && currentVendorId !== vendorId) {
+    const oldVendorRef = doc(db, "vendors", currentVendorId);
+    await updateDoc(oldVendorRef, {
+      driverIds: arrayRemove(driverId),
+      lastUpdate: new Date().toISOString(),
+    });
+  }
+
+  // Assign driver to new vendor
+  await updateDoc(driverRef, {
+    assignedVendorId: vendorId,
+    lastUpdate: new Date().toISOString(),
+  });
+
+  // Add driver ID to vendor's driverIds array
+  const vendorRef = doc(db, "vendors", vendorId);
+  await updateDoc(vendorRef, {
+    driverIds: arrayUnion(driverId),
+    lastUpdate: new Date().toISOString(),
+  });
+}
+
+/**
+ * Remove a driver from a vendor.
+ * Updates:
+ * - drivers.assignedVendorId (set to null)
+ * - vendors.driverIds (remove driver ID)
+ */
+export async function removeDriverFromVendor(
+  driverId: string,
+  vendorId: string,
+): Promise<void> {
+  const driverRef = doc(db, "drivers", driverId);
+  await updateDoc(driverRef, {
+    assignedVendorId: null,
+    lastUpdate: new Date().toISOString(),
+  });
+
+  const vendorRef = doc(db, "vendors", vendorId);
+  await updateDoc(vendorRef, {
+    driverIds: arrayRemove(driverId),
+    lastUpdate: new Date().toISOString(),
+  });
+}
+
+/**
+ * Assign a vendor to a school using vendorId.
+ */
+export async function assignVendorToSchoolByVendorId(
+  schoolId: string,
+  vendorId: string,
+): Promise<void> {
+  const schoolRef = doc(db, "schools", schoolId);
+  await updateDoc(schoolRef, {
+    vendorId: vendorId,
+    lastUpdate: new Date().toISOString(),
+  });
+}
+
+/**
+ * Remove vendor assignment from a school.
+ */
+export async function removeVendorFromSchool(schoolId: string): Promise<void> {
+  const schoolRef = doc(db, "schools", schoolId);
+  await updateDoc(schoolRef, {
+    vendorId: null,
+    lastUpdate: new Date().toISOString(),
+  });
+}
+
+/**
+ * Fetch all approved vendors with their drivers populated.
+ * Optionally include only vendors that have drivers (driverIds non-empty).
+ */
+export async function getAllVendors(
+  approvedOnly = true,
+  withDriversOnly = false,
+): Promise<Vendor[]> {
+  const constraints: QueryConstraint[] = [];
+
+  if (approvedOnly) {
+    constraints.push(where("isApproved", "==", true));
+  }
+
+  const q =
+    constraints.length > 0
+      ? query(collection(db, "vendors"), ...constraints)
+      : collection(db, "vendors");
+
+  const snapshot = await getDocs(q);
+  const vendors = snapshot.docs.map((d) =>
+    normalise({ id: d.id, ...d.data() }, "vendor"),
+  ) as Vendor[];
+
+  // Filter to only vendors with drivers if requested
+  if (withDriversOnly) {
+    return vendors.filter((v) => v.driverIds && v.driverIds.length > 0);
+  }
+
+  return vendors;
+}
+
+/**
+ * Fetch all approved drivers, optionally with vendor info enriched.
+ */
+export async function getAllDrivers(approvedOnly = true): Promise<Driver[]> {
+  const constraints: QueryConstraint[] = [];
+
+  if (approvedOnly) {
+    constraints.push(where("isApproved", "==", true));
+  }
+
+  const q =
+    constraints.length > 0
+      ? query(collection(db, "drivers"), ...constraints)
+      : collection(db, "drivers");
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) =>
+    normalise({ id: d.id, ...d.data() }, "driver"),
+  ) as Driver[];
+}
+
+/**
+ * Real-time subscription to all approved vendors.
+ */
+export function subscribeToVendors(
+  callback: (vendors: Vendor[]) => void,
+  approvedOnly = true,
+  withDriversOnly = false,
+): Unsubscribe {
+  const constraints: QueryConstraint[] = [];
+
+  if (approvedOnly) {
+    constraints.push(where("isApproved", "==", true));
+  }
+
+  const q =
+    constraints.length > 0
+      ? query(collection(db, "vendors"), ...constraints)
+      : collection(db, "vendors");
+
+  return onSnapshot(q, (snapshot) => {
+    const vendors = snapshot.docs.map((d) =>
+      normalise({ id: d.id, ...d.data() }, "vendor"),
+    ) as Vendor[];
+
+    const filtered = withDriversOnly
+      ? vendors.filter((v) => v.driverIds && v.driverIds.length > 0)
+      : vendors;
+
+    callback(filtered);
+  });
+}
+
+/**
  * Compute counts for total / approved / pending / rejected in a collection.
  */
 export async function getRegistrationStats(
@@ -204,11 +380,17 @@ export async function getRegistrationStats(
   const collectionName = COLLECTION_MAP[type];
   const [allSnap, approvedSnap, notApprovedSnap] = await Promise.all([
     getDocs(collection(db, collectionName)),
-    getDocs(query(collection(db, collectionName), where("isApproved", "==", true))),
-    getDocs(query(collection(db, collectionName), where("isApproved", "==", false))),
+    getDocs(
+      query(collection(db, collectionName), where("isApproved", "==", true)),
+    ),
+    getDocs(
+      query(collection(db, collectionName), where("isApproved", "==", false)),
+    ),
   ]);
 
-  const rejectedCount = notApprovedSnap.docs.filter((d) => !!d.get("rejectReason")).length;
+  const rejectedCount = notApprovedSnap.docs.filter(
+    (d) => !!d.get("rejectReason"),
+  ).length;
 
   return {
     total: allSnap.size,

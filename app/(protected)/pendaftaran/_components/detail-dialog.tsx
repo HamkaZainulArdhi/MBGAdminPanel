@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,12 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { SchoolDetailDialog } from "@/app/(protected)/pendaftaran/_components/detail-dialog-school";
 import { VendorDetailDialog } from "@/app/(protected)/pendaftaran/_components/detail-dialog-vendor";
 import { DriverDetailDialog } from "@/app/(protected)/pendaftaran/_components/detail-dialog-driver";
-
+import { useVendors } from "@/hooks/useVendors";
+import { useRegistrationDetail } from "@/hooks/useRegistrationDetail";
+import {
+  assignDriverToVendor,
+  assignVendorToSchoolByVendorId,
+} from "@/lib/registration-service";
 
 function formatDateTime(dateString: string): string {
   try {
@@ -74,16 +79,38 @@ export function DetailDialog({
 }: DetailDialogProps) {
   const [rejectReason, setRejectReason] = useState("");
   const [isRejectMode, setIsRejectMode] = useState(false);
+  const [isAssigningVendor, setIsAssigningVendor] = useState(false);
 
-  if (!data) return null;
+  // Fetch all vendors for assignment
+  const { vendors } = useVendors();
 
-  const displayName = getRegistrationName(data);
-  const statusLabel = getStatusLabel(data);
-  const isAlreadyApproved = data.isApproved === true;
+  // Subscribe to detail of specific registration item
+  // This ensures we get real-time updates when data changes in Firestore
+  const registrationType = data
+    ? isSchool(data)
+      ? "school"
+      : isDriver(data)
+        ? "driver"
+        : "vendor"
+    : null;
+
+  const { data: detailData } = useRegistrationDetail(
+    data ? registrationType : null,
+    data?.id,
+  );
+
+  // Use the real-time detail data if available, otherwise fall back to prop
+  const displayData = detailData || data;
+
+  if (!displayData) return null;
+
+  const displayName = getRegistrationName(displayData);
+  const statusLabel = getStatusLabel(displayData);
+  const isAlreadyApproved = displayData.isApproved === true;
 
   const handleApprove = async () => {
     try {
-      await onApprove(data.id!);
+      await onApprove(displayData.id!);
       toast.success("Pendaftaran berhasil disetujui");
       resetAndClose();
     } catch {
@@ -97,11 +124,45 @@ export function DetailDialog({
       return;
     }
     try {
-      await onReject(data.id!, rejectReason);
+      await onReject(displayData.id!, rejectReason);
       toast.success("Pendaftaran ditolak");
       resetAndClose();
     } catch {
       toast.error("Gagal menolak pendaftaran");
+    }
+  };
+
+  const handleDriverVendorAssignment = async (vendorId: string) => {
+    if (!isDriver(displayData) || !displayData.id) return;
+
+    try {
+      setIsAssigningVendor(true);
+      await assignDriverToVendor(displayData.id, vendorId);
+      toast.success("Driver berhasil ditugaskan ke Vendor");
+      // Don't close dialog - let real-time data update from Firestore
+      // useRegistrationDetail hook will automatically fetch updated data
+    } catch (error) {
+      console.error("Error assigning driver:", error);
+      toast.error("Gagal menugaskan driver ke vendor");
+    } finally {
+      setIsAssigningVendor(false);
+    }
+  };
+
+  const handleSchoolVendorAssignment = async (vendorId: string) => {
+    if (!isSchool(displayData) || !displayData.id) return;
+
+    try {
+      setIsAssigningVendor(true);
+      await assignVendorToSchoolByVendorId(displayData.id, vendorId);
+      toast.success("Vendor berhasil ditugaskan ke Sekolah");
+      // Don't close dialog - let real-time data update from Firestore
+      // useRegistrationDetail hook will automatically fetch updated data
+    } catch (error) {
+      console.error("Error assigning school vendor:", error);
+      toast.error("Gagal menugaskan vendor ke sekolah");
+    } finally {
+      setIsAssigningVendor(false);
     }
   };
 
@@ -122,50 +183,62 @@ export function DetailDialog({
         {/* ── Header ── */}
         <DialogHeader className="p-5 border-b border-border">
           <div className="flex-1 min-w-0">
-            <DialogTitle className="text-xl font-bold break-words leading-tight">
+            <DialogTitle className="text-xl font-bold wrap-break-word leading-tight">
               {displayName}
             </DialogTitle>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-              <span className="text-sm text-muted-foreground font-mono">{data.email}</span>
+              <span className="text-sm text-muted-foreground font-mono">
+                {displayData.email}
+              </span>
               <span className="text-xs text-muted-foreground/60">·</span>
-              <span className="text-xs text-muted-foreground/70 font-mono">ID: {data.id}</span>
+              <span className="text-xs text-muted-foreground/70 font-mono">
+                ID: {displayData.id}
+              </span>
             </div>
           </div>
-          <Badge variant={statusBadgeVariant(data)} className="shrink-0 text-sm px-3 py-1">
+          <Badge
+            variant={statusBadgeVariant(displayData)}
+            className="shrink-0 text-sm px-3 py-1"
+          >
             {statusLabel}
           </Badge>
         </DialogHeader>
 
         {/* ── Type-specific content ── */}
 
-        {isSchool(data) && (
+        {isSchool(displayData) && (
           <SchoolDetailDialog
-            data={data as School}
+            data={displayData as School}
+            vendors={vendors as Vendor[]}
             rejectReason={rejectReason}
             isRejectMode={isRejectMode}
+            isAssigningVendor={isAssigningVendor}
             onRejectReasonChange={setRejectReason}
+            onVendorSelected={handleSchoolVendorAssignment}
             formatDateTime={formatDateTime}
           />
         )}
-        {isVendor(data) && (
+        {isVendor(displayData) && (
           <VendorDetailDialog
-            data={data as Vendor}
+            data={displayData as Vendor}
             rejectReason={rejectReason}
             isRejectMode={isRejectMode}
             onRejectReasonChange={setRejectReason}
             formatDateTime={formatDateTime}
           />
         )}
-        {isDriver(data) && (
+        {isDriver(displayData) && (
           <DriverDetailDialog
-            data={data as Driver}
+            data={displayData as Driver}
+            vendors={vendors as Vendor[]}
             rejectReason={rejectReason}
             isRejectMode={isRejectMode}
+            isAssigningVendor={isAssigningVendor}
             onRejectReasonChange={setRejectReason}
+            onVendorSelected={handleDriverVendorAssignment}
             formatDateTime={formatDateTime}
           />
         )}
-
 
         {/* ── Footer actions ── */}
         <DialogFooter className="px-6 py-4 border-t border-border">
@@ -186,15 +259,25 @@ export function DetailDialog({
                 className="gap-2"
               >
                 {isActionLoading ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" />Memproses…</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Memproses…
+                  </>
                 ) : (
-                  <><CheckCircle2 className="h-4 w-4" />Setujui</>
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Setujui
+                  </>
                 )}
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={cancelReject} disabled={isActionLoading}>
+              <Button
+                variant="outline"
+                onClick={cancelReject}
+                disabled={isActionLoading}
+              >
                 Batal
               </Button>
               <Button
@@ -204,9 +287,15 @@ export function DetailDialog({
                 className="gap-2"
               >
                 {isActionLoading ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" />Menolak…</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Menolak…
+                  </>
                 ) : (
-                  <><XCircle className="h-4 w-4" />Konfirmasi Penolakan</>
+                  <>
+                    <XCircle className="h-4 w-4" />
+                    Konfirmasi Penolakan
+                  </>
                 )}
               </Button>
             </>

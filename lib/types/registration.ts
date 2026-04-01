@@ -17,7 +17,14 @@ export interface School {
   address: string;
   latitude?: number;
   longitude?: number;
-  porsi?: number | { smp_sma?: number; sd_4_6?: number; sd_1_3?: number;[key: string]: any };
+  porsi?:
+    | number
+    | {
+        smp_sma?: number;
+        sd_4_6?: number;
+        sd_1_3?: number;
+        [key: string]: any;
+      };
   p13?: number;
   p46?: number;
   pSMP?: number;
@@ -27,7 +34,9 @@ export interface School {
   level?: string;
   email: string;
   phone?: string;
-  pic?: string | { nama?: string; jabatan?: string; hp?: string;[key: string]: any };
+  pic?:
+    | string
+    | { nama?: string; jabatan?: string; hp?: string; [key: string]: any };
   picName?: string;
   picPosition?: string;
   picPhone?: string;
@@ -36,6 +45,8 @@ export interface School {
   rejectReason?: string | null;
   createdAt: string;
   lastUpdate?: string;
+  // Relasi ke Vendor dan Driver
+  vendorId?: string | null;
   assignedVendorEmail?: string;
   assignedDriverId?: string;
   status?: string;
@@ -78,6 +89,8 @@ export interface Vendor {
   rejectReason?: string | null;
   createdAt: string;
   lastUpdate?: string;
+  // Relasi
+  driverIds?: string[];
   // Compliance
   hasHalal?: boolean;
   setujuSLA?: boolean;
@@ -132,6 +145,8 @@ export interface Driver {
   rejectReason?: string | null;
   createdAt: string;
   lastUpdate?: string;
+  // Relasi ke Vendor
+  assignedVendorId?: string | null;
   assignedVendorEmail?: string;
   currentNavigatingSchool?: string;
   // Status
@@ -179,22 +194,22 @@ export interface RegistrationStats {
  * Schools uniquely have the "npsn" field.
  */
 export const isSchool = (data: RegistrationData): data is School =>
-  "npsn" in data;
+  "schoolId" in data;
 
 /**
  * Type guard for Vendor.
  * Vendors uniquely have "nib" AND "targetPorsi" fields but no "npsn" or "nik".
  */
-export const isVendor = (data: RegistrationData): data is Vendor =>
-  "nib" in data && "targetPorsi" in data && !("npsn" in data) && !("nik" in data);
 
+export const isVendor = (data: RegistrationData): data is Vendor =>
+  "vendorId" in data;
 /**
  * Type guard for Driver.
  * Drivers uniquely have "nik" AND "vehiclePlate" fields.
  */
-export const isDriver = (data: RegistrationData): data is Driver =>
-  "nik" in data && "vehiclePlate" in data;
 
+export const isDriver = (data: RegistrationData): data is Driver =>
+  "driverId" in data;
 /**
  * Returns the display name for any registration entity.
  * Schools: name (or schoolName fallback)
@@ -214,7 +229,9 @@ export function getRegistrationName(data: RegistrationData): string {
 /**
  * Returns approval status label in Indonesian.
  */
-export function getStatusLabel(data: RegistrationData): "Disetujui" | "Ditolak" | "Tertunda" {
+export function getStatusLabel(
+  data: RegistrationData,
+): "Disetujui" | "Ditolak" | "Tertunda" {
   if (data.isApproved) return "Disetujui";
   if (data.rejectReason) return "Ditolak";
   return "Tertunda";
