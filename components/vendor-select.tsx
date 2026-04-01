@@ -56,7 +56,7 @@ export function VendorSelect({
 
       <Select
         value={selectedVendorId || ""}
-        onValueChange={onSelect}
+        onValueChange={(value) => value && onSelect(value)}
         disabled={disabled || isLoading || hasNoVendors}
       >
         <SelectTrigger className="w-full">
