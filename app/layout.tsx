@@ -4,16 +4,14 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 import { Outfit } from "next/font/google";
+import { sitematedata } from "@/lib/metadata";
+
+export const metadata = sitematedata;
 
 const fontSans = Outfit({
   subsets: ["latin"],
   variable: "--font-sans",
 });
-
-export const metadata: Metadata = {
-  title: "MBG Admin Panel",
-  description: "MBG Admin Panel",
-};
 
 export default function RootLayout({
   children,
