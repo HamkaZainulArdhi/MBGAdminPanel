@@ -1,0 +1,10 @@
+# *
+
+use agent: *
+Allow: /
+
+# Host
+Host: https://mbg-adminpanel.vercel.app/
+
+# Sitemaps
+sitemap: https://mbg-adminpanel.vercel.app/sitemap.xml
